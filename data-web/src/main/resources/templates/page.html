@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+    <link rel="stylesheet" href="../css/bootstrap.css">
+    <title>数据网页</title>
+</head>
+<body>
+<table border="1" style="background-color: #1b6d85;width: 100%; text-align: center">
+    <tr><td>信息</td><td>数量</td></tr>
+    <tr><td>消息者个数</td><td th:text="${queueModel.consumers}"></td></tr>
+    <tr><td>消息总量</td><td th:text="${queueModel.messages}"></td></tr>
+    <tr><td>准备量</td><td th:text="${queueModel.messages_ready}"></td></tr>
+    <tr><td>未回应量</td><td th:text="${queueModel.messages_unacknowledged}"></td></tr>
+</table>
+<h1>-------------------------------------------------------------</h1>
+<!--<form action="../upload" method="post" enctype="multipart/form-data">-->
+<!--    <input type="file" name="file" accept="image/*">-->
+<!--    <br>-->
+<!--    <input type="submit" value="上传" class="btn btn-success">-->
+<!--</form>-->
+    <form action="../getData" method="get">
+        <br/>
+        <table>
+        <tr>
+            <td>
+                <select name="keywordType" style="width: 183px;height: 25px;">
+                    <option value="">请选择</option>
+                    <option th:each="s:${paramap}" th:value="${s.key}" th:text="${s.value}"></option>
+                </select>
+            </td>
+        </tr>
+            <tr>
+                <td>&nbsp;</td>
+            </tr>
+        <tr>
+            <td>
+                <input type="text" id="tagId" th:value="${time}" name="tag"/>
+            </td>
+        </tr>
+        <tr>
+            <td> <input type="submit" id="btnId" value="下载" class="btn btn-success"></td>
+        </tr>
+        </table>
+    </form>
+<br>
+<h1>-------------------------------------------------------------</h1>
+<ol>
+    <li>当前文件列表如下:
+        <table border="1">
+            <tr>
+                <th>文件名</th>
+                <th>上传时间</th>
+            </tr>
+            <tr  th:each="file,userStat : ${list}">
+                <td th:text="${file.name}">Onions</td>
+                <td th:text="${#dates.format(file.lastModified(), 'yyyy-MM-dd hh:mm:ss')}">test@test.com.cn</td>
+            </tr>
+        </table>
+    </li>
+</ol>
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,44 @@
+server:
+  port: 8888
+  tomcat:
+    basedir: /tmp
+spring:
+  security:
+    user:
+      name: admin
+      password: admin11234
+  rabbitmq:
+    host: 127.0.0.1
+    username: admin
+    password: admin1123
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 500MB
+  datasource:
+    druid:
+      driver-class-name: com.mysql.jdbc.Driver
+      url: jdbc:mysql://127.0.0.1:3306/db_url?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+      username: mysqladmin
+      password: mysql@Server!31
+      initial-size: 1
+      max-active: 10
+      min-idle: 1
+      max-wait: 60000
+      timeBetweenEvictionRunsMillis: 2000
+      max-evictable-idle-time-millis: 900000
+      min-evictable-idle-time-millis: 600000
+      validation-query: select 1
+      keep-alive: true
+      filters: stat
+upload:
+  file:
+    timeout: 48  #文件显示过期时间(单位:小时)
+  target:
+    folder: /usr/data/
+
+logging:
+  level:
+    com.tdp.data.web.service.DbMapper: debug
+
