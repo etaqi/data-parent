@@ -17,6 +17,7 @@ import java.util.zip.ZipOutputStream;
 
 import javax.servlet.http.HttpServletResponse;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Component;
  * @date 2020/10/15 11:39
  */
 @Component
+@Slf4j
 public class ZipUtils {
 
     /**
@@ -303,6 +305,7 @@ public class ZipUtils {
      * @return
      */
     public static boolean listFileToZipStream(List<File> fileList, String fileName, HttpServletResponse response){
+        log.info("开始压缩文件,列表个数为:{}", fileList.size());
         List<ZipStreamEntity> listStream = new ArrayList<>(fileList.size());
 
         try {
@@ -334,12 +337,13 @@ public class ZipUtils {
             out = response.getOutputStream();
             response.reset();
             response.setHeader("Content-Disposition",
-                    "attachment;filename=" + new String(fileName.getBytes("GB2312"), "ISO-8859-1"));
+                    "attachment;filename=" + new String(fileName.getBytes("UTF-8"), "ISO-8859-1"));
             response.setContentType("application/octet-stream; charset=utf-8");
             response.setCharacterEncoding("UTF-8");
             zos = new ZipOutputStream(out);
             byte[] bufs = new byte[1024 * 10];
             for (ZipStreamEntity zipstream : listStream) {
+                log.info("开始压缩文件名为:{}的文件", zipstream.getName());
                 String streamfilename = zipstream.getName();
                 // 创建ZIP实体，并添加进压缩包
                 ZipEntry zipEntry = new ZipEntry(streamfilename);
@@ -350,6 +354,7 @@ public class ZipUtils {
                 while ((read = bis.read(bufs, 0, 1024 * 10)) != -1) {
                     zos.write(bufs, 0, read);
                 }
+                log.info("文件名:{}的文件压缩完毕!", zipstream.getName());
             }
             flag = true;
             zos.close();

@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://47.104.171.31:3306/db_url?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&useCursorFetch=true
+      username: mysqladmin
+      password: mysql@Server!31
+      initial-size: 1
+      max-active: 10
+      min-idle: 1
+      max-wait: 60000
+      timeBetweenEvictionRunsMillis: 2000
+      max-evictable-idle-time-millis: 900000
+      min-evictable-idle-time-millis: 600000
+      validation-query: select 1
+      keep-alive: true
+      filters: stat
+file:
+  log:
+    path: /root/data/

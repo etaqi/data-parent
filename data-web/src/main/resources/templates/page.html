@@ -23,7 +23,19 @@
     <form action="../getData" method="get">
         <br/>
         <table>
+            <tr>
+                <td>是否命中</td>
+                <td>
+                    <select name="checked" style="width: 183px;height: 25px;">
+                        <option value="">请选择是否要输出命中的列表</option>
+                        <option th:each="s:${checkedmap}" th:value="${s.key}" th:text="${s.value}"></option>
+                    </select>
+                </td>
+            </tr>
         <tr>
+            <td>
+                网址类型
+            </td>
             <td>
                 <select name="keywordType" style="width: 183px;height: 25px;">
                     <option value="">请选择</option>
@@ -35,6 +47,7 @@
                 <td>&nbsp;</td>
             </tr>
         <tr>
+            <td>时间</td>
             <td>
                 <input type="text" id="tagId" th:value="${time}" name="tag"/>
             </td>

@@ -1,18 +1,18 @@
 package com.tdp.data.web.controller;
 
 import com.tdp.data.web.pojo.UrlModel;
-import com.tdp.data.web.service.DbMapper;
-import com.tdp.data.web.service.KeywordEnum;
-import com.tdp.data.web.service.QueueModel;
-import com.tdp.data.web.service.RabbitUtils;
+import com.tdp.data.web.service.*;
 import com.tdp.data.web.utils.FileWriterUtils;
 import com.tdp.data.web.utils.ZipUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.cursor.Cursor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.ResourceUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,17 +21,21 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
+import java.io.*;
+import java.net.URLEncoder;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 提供项目访问接口
  * @author admin
  */
 @Controller
+@Slf4j
 public class WebController {
 
 
@@ -40,12 +44,13 @@ public class WebController {
 
     @Value("${upload.target.folder}")
     private String targetFolder;
+    @Value("${file.log.path}")
+    private String fileLogPath;
 
     @Value("${upload.file.timeout}")
     private int fileTimeOut;
 
-    @Resource
-    private DbMapper dbMapper;
+    @Resource private DbService dbService;
 
     private static final Logger logger = LoggerFactory.getLogger(WebController.class);
 
@@ -77,6 +82,11 @@ public class WebController {
         }
 
 
+        Map<Boolean, String> checkedMap = new HashMap<>();
+        checkedMap.put(true, "命中的列表");
+        checkedMap.put(false, "非命中列表");
+        model.addAttribute("checkedmap", checkedMap);
+
         KeywordEnum[] keywordEnums = KeywordEnum.values();
 
         Map<Integer, String> paramap = new HashMap<>();
@@ -85,7 +95,7 @@ public class WebController {
         }
         model.addAttribute("paramap", paramap);
 
-        String time = LocalDate.now().minusDays(1).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String time = LocalDate.now().minusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
 
         model.addAttribute("time", time);
         //显示MQ队列相关信息
@@ -96,13 +106,19 @@ public class WebController {
         return "page";
     }
 
+    /**
+     * 获取命中的列表
+     * @param tag tag值,一般为时间时间yyyy-MM-dd
+     * @param keywordType
+     * @param checked
+     * @param response
+     */
     @RequestMapping("/getData")
     @ResponseBody
-    public void getData(String tag, String keywordType, HttpServletResponse response){
+    public void getData(String tag, String keywordType,Boolean checked, HttpServletResponse response){
 
         // 获取系统的临时文件存储点
         String folder_tmp = System.getProperty("java.io.tmpdir");
-
         try {
             String responseFileName;
             if (StringUtils.isEmpty(tag)){
@@ -110,42 +126,72 @@ public class WebController {
             } else {
                 responseFileName = tag + ".zip";
             }
-
-            KeywordEnum[] keywordEnums = KeywordEnum.values();
+            List<KeywordEnum> keywordEnumList = null;
+            if (checked == null || checked){
+                responseFileName = "Used_" + responseFileName;
+                keywordEnumList =  Arrays.stream(KeywordEnum.values()).filter(t->t.checked).collect(Collectors.toList());
+            } else {
+                responseFileName = "UnUsed_" + responseFileName;
+                keywordEnumList =  Arrays.stream(KeywordEnum.values()).filter(t->!t.checked).collect(Collectors.toList());
+            }
 
             List<File> fileList = new ArrayList<>();
-
             if (StringUtils.isEmpty(keywordType)){
                 // 未选择筛选类型
-                for (int i=0;i<keywordEnums.length; i++){
-                    List<UrlModel> _list = dbMapper.selectAllUrlByTag(tag, keywordEnums[i].index, Integer.MAX_VALUE);
-                    if(_list.size() == 0){
-                        continue;
+                for (int i=0;i<keywordEnumList.size(); i++){
+                    String _filePath = folder_tmp + File.separator + keywordEnumList.get(i).name + ".txt";
+                    boolean r = dbService.writeDomainByParameter(tag, keywordEnumList.get(i).index, null, _filePath);
+                    if (r){
+                        fileList.add(new File(_filePath));
                     }
-                    String _filePath = folder_tmp + File.separator + keywordEnums[i].name + ".txt";
-                    FileWriterUtils.writeFile(_list, _filePath);
-                    fileList.add(new File(_filePath));
                 }
             } else {
                 // 选择了筛选类型
-                Map<Integer, String> paraMap = new HashMap<>(keywordEnums.length);
-                for (KeywordEnum keywordEnum: keywordEnums) {
+                Map<Integer, String> paraMap = new HashMap<>(KeywordEnum.values().length);
+                for (KeywordEnum keywordEnum: KeywordEnum.values()) {
                     paraMap.put(keywordEnum.index, keywordEnum.name);
                 }
-
                 Integer keywordTypeInteger = Integer.parseInt(keywordType);
                 String keywordName = paraMap.get(keywordTypeInteger);
-                List<UrlModel> _list = dbMapper.selectAllUrlByTag(tag, keywordTypeInteger, Integer.MAX_VALUE);
-
                 String _filePath = folder_tmp + File.separator + keywordName + ".txt";
-                FileWriterUtils.writeFile(_list, _filePath);
-                fileList.add(new File(_filePath));
+                boolean  r = dbService.writeDomainByParameter(tag, keywordTypeInteger, null, _filePath);
+               if (r){
+                   fileList.add(new File(_filePath));
+               }
             }
             ZipUtils.listFileToZipStream(fileList, responseFileName, response);
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
+        }
+    }
 
+
+    /**
+     * 获取下载文件
+     * @param dateString 下载文件 yyyyMMdd
+     * @param response 返回流
+     * @throws IOException 异常
+     */
+    @GetMapping("/downloadLogFile")
+    public void downloadLogFile(String dateString,HttpServletResponse response) throws IOException {
+        // 指定要下载的文件
+        //File file = ResourceUtils.getFile("classpath:2.zip");
+        String fileNameStr = new StringBuffer(dateString).insert(4, "-").insert(7,"-").append(".json.gz").toString();
+        String filePath = fileLogPath + fileNameStr;
+        File file = ResourceUtils.getFile(filePath);
+        //文件名编码，防止中文乱码
+        String filename = URLEncoder.encode(file.getName(), "UTF-8");
+        // 设置响应头信息
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        // 内容类型为通用类型，表示二进制数据流
+        response.setContentType("application/octet-stream");
+        // 循环，边读取边输出，可避免大文件时OOM
+        try (InputStream inputStream = new FileInputStream(file); OutputStream os = response.getOutputStream()) {
+            byte[] bytes = new byte[1024];
+            int readLength;
+            while ((readLength = inputStream.read(bytes)) != -1) {
+                os.write(bytes, 0, readLength);
+            }
         }
     }
 
