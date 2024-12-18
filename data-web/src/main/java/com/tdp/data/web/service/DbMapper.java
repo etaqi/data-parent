@@ -3,10 +3,7 @@ package com.tdp.data.web.service;
 
 import com.tdp.data.web.pojo.UrlDomainModel;
 import com.tdp.data.web.pojo.UrlModel;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Options;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.cursor.Cursor;
 import org.apache.ibatis.mapping.ResultSetType;
 
@@ -61,4 +58,13 @@ public interface DbMapper {
             "</script>")
     @Options(resultSetType = ResultSetType.FORWARD_ONLY, fetchSize = 100000)
     Cursor<UrlModel> selectAllUrlByTag(@Param("tag") String tag, @Param("keywordType")Integer keywordType, @Param("limitNum") Integer limitNum);
+
+    /**
+     * 插入关键词
+     * @param content 内容
+     * @param type 类型
+     * @return 受影响的行数
+     */
+    @Insert("insert into keywords(keyword_string, keyword_type) values (#{content},#{type})")
+    int insertKeyWords(@Param("content")String content, @Param("type")Integer type);
 }

@@ -1,7 +1,6 @@
 server:
   port: 8888
   tomcat:
-    basedir: /tmp
     connection-timeout: -1
 spring:
   security:

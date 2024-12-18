@@ -14,9 +14,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.ResourceUtils;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -42,8 +41,6 @@ public class WebController {
     @Autowired
     private RabbitUtils rabbitUtils;
 
-    @Value("${upload.target.folder}")
-    private String targetFolder;
     @Value("${file.log.path}")
     private String fileLogPath;
 
@@ -58,7 +55,7 @@ public class WebController {
     public String upload(HttpServletRequest request, Model model) {
         logger.info("IP:{}=>访问了网站",request.getRemoteAddr());
         //显示当前文件夹中的文件列表
-        File file = new File(targetFolder);
+        File file = new File(fileLogPath);
         File[] files = file.listFiles(_file -> {
             if(System.currentTimeMillis() - _file.lastModified() > fileTimeOut * 3600000){
                 return false;
@@ -110,7 +107,7 @@ public class WebController {
      * 获取命中的列表
      * @param tag tag值,一般为时间时间yyyy-MM-dd
      * @param keywordType
-     * @param checked
+     * @param checked  是否是命中的列表
      * @param response
      */
     @RequestMapping("/getData")
@@ -195,20 +192,34 @@ public class WebController {
         }
     }
 
+//    @Resource private DbMapper dbMapper;
+//
 //    @PostMapping("/upload")
 //    @ResponseBody
-//    public String upload(@RequestParam("file") MultipartFile file) {
+//    public String upload(@RequestParam("file") MultipartFile file, Integer tag) {
 //       // 获取上传文件名
 //        String filename = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + "_" + file.getOriginalFilename();
 //        // 新建文件
-//        File filepath = new File(targetFolder, filename);
+//        File filepath = new File(fileLogPath, filename);
 //        // 判断路径是否存在，如果不存在就创建一个
 //        if (!filepath.getParentFile().exists()) {
 //            filepath.getParentFile().mkdirs();
 //        }
 //        try {
+//            String targetFilePath = fileLogPath + File.separator + filename;
 //            // 写入文件
-//            file.transferTo(new File(targetFolder + File.separator + filename));
+//            file.transferTo(new File(new File(fileLogPath).getAbsolutePath()+"/" + filename));
+//            List<String> list = new ArrayList<>();
+//            try(BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(targetFilePath)))){
+//                String content = null;
+//                while ((content = bufferedReader.readLine()) != null){
+//                    list.add(content);
+//                }
+//            }
+//            log.info("读取的行数为:{}", list.size());
+//            list.forEach(t-> dbMapper.insertKeyWords(
+//                    t, tag)
+//            );
 //        } catch (IOException e) {
 //            e.printStackTrace();
 //            return "文件" + filename + "上传出错!";
